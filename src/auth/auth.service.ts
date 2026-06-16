@@ -1,3 +1,4 @@
+import { JwtService } from '@nestjs/jwt';
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
@@ -6,7 +7,10 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
   async register(data: RegisterDto) {
     const existingUser = await this.prisma.user.findUnique({
@@ -62,15 +66,16 @@ export class AuthService {
       throw new BadRequestException('Invalid username or password');
     }
 
+    const payload = {
+      sub: user.id,
+      username: user.username,
+    };
+
+    const access_token = await this.jwtService.signAsync(payload);
+
     return {
       message: 'Login successful',
-      user: {
-        id: user.id,
-        name: user.name,
-        profession: user.profession,
-        username: user.username,
-        createdAt: user.createdAt,
-      },
+      access_token,
     };
   }
 }
